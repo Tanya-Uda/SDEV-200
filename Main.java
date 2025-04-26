@@ -1,5 +1,6 @@
 package application;
 
+// Import necessary JavaFX and SQL libraries
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
@@ -10,6 +11,8 @@ import javafx.stage.Stage;
 import java.sql.*;
 
 public class Main extends Application {
+
+    // Define UI components as instance variables
     TextField tfId = new TextField();
     TextField tfLastName = new TextField();
     TextField tfFirstName = new TextField();
@@ -20,13 +23,17 @@ public class Main extends Application {
     TextField tfTelephone = new TextField();
     TextField tfEmail = new TextField();
     Label lblStatus = new Label();
-
+    
+ // Define database connection
     Connection conn;
 
     @Override
     public void start(Stage primaryStage) {
+
+        // Connect to the database when application starts
         connectToDB();
-        
+
+        // Set preferred widths for the text fields
         tfId.setPrefWidth(120); 
         tfLastName.setPrefWidth(100);
         tfFirstName.setPrefWidth(100);
@@ -37,6 +44,7 @@ public class Main extends Application {
         tfTelephone.setPrefWidth(100); 
         tfEmail.setPrefWidth(100); 
 
+        // Create a grid pane for input fields
         GridPane pane = new GridPane();
         pane.setPadding(new Insets(10));
         pane.setHgap(5);
@@ -73,6 +81,7 @@ public class Main extends Application {
             }
         });
 
+        // Create and add control buttons
         HBox buttonBox = new HBox(10);
         Button btView = new Button("View");
         Button btInsert = new Button("Insert");
@@ -83,11 +92,13 @@ public class Main extends Application {
         VBox mainLayout = new VBox(10, lblStatus, pane, buttonBox);
         mainLayout.setPadding(new Insets(10));
 
+        // Set button actions
         btView.setOnAction(e -> viewRecord());
         btInsert.setOnAction(e -> insertRecord());
         btUpdate.setOnAction(e -> updateRecord());
         btClear.setOnAction(e -> clearFields());
 
+        // Set up and display the scene
         Scene scene = new Scene(mainLayout, 400, 450);
         primaryStage.setTitle("Staff Database App");
         primaryStage.setScene(scene);
@@ -104,6 +115,7 @@ public class Main extends Application {
         }
     }
 
+    // Retrieves a record from the database based on the entered ID
     private void viewRecord() {
         String sql = "SELECT * FROM staff WHERE ID = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -127,6 +139,7 @@ public class Main extends Application {
         }
     }
 
+    // Inserts a new record into the database
     private void insertRecord() {
         String sql = "INSERT INTO staff (`ID`, `Last Name`, `First Name`, `MI`, `Address`, `City`, `State`, `Telephone`, `Email`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -147,6 +160,7 @@ public class Main extends Application {
         }
     }
 
+    // Updates an existing record in the database
     private void updateRecord() {
         String sql = "UPDATE staff SET `Last Name`=?, `First Name`=?, `MI`=?, `Address`=?, `City`=?, `State`=?, `Telephone`=?, `Email`=? WHERE ID=?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -167,6 +181,7 @@ public class Main extends Application {
         }
     }
 
+    // Clears all input fields and resets the status label
     private void clearFields() {
         tfId.clear();
         tfLastName.clear();
