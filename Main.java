@@ -1,198 +1,128 @@
 package application;
 
-// Import necessary JavaFX and SQL libraries
 import javafx.application.Application;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
-import javafx.stage.Stage;
+import javafx.stage.*;
 
 import java.sql.*;
 
 public class Main extends Application {
 
-    // Define UI components as instance variables
-    TextField tfId = new TextField();
-    TextField tfLastName = new TextField();
-    TextField tfFirstName = new TextField();
-    TextField tfMI = new TextField();
-    TextField tfAddress = new TextField();
-    TextField tfCity = new TextField();
-    TextField tfState = new TextField();
-    TextField tfTelephone = new TextField();
-    TextField tfEmail = new TextField();
-    Label lblStatus = new Label();
-    
- // Define database connection
-    Connection conn;
+    private Connection conn;
+    private Label lblStatus = new Label("Not connected");
 
     @Override
     public void start(Stage primaryStage) {
+        // Top: Status + Connect Button
+        Button btnConnect = new Button("Connect to Database");
+        HBox topBox = new HBox(10, lblStatus, btnConnect);
+        topBox.setAlignment(Pos.CENTER_LEFT);
+        topBox.setPadding(new Insets(10));
 
-        // Connect to the database when application starts
-        connectToDB();
+        // Bottom: Batch and Non-Batch Buttons
+        Button btnBatchUpdate = new Button("Batch Update");
+        Button btnNonBatchUpdate = new Button("Non-Batch Update");
+        HBox bottomBox = new HBox(10, btnBatchUpdate, btnNonBatchUpdate);
+        bottomBox.setAlignment(Pos.CENTER);
+        bottomBox.setPadding(new Insets(10));
 
-        // Set preferred widths for the text fields
-        tfId.setPrefWidth(120); 
-        tfLastName.setPrefWidth(100);
-        tfFirstName.setPrefWidth(100);
-        tfMI.setPrefWidth(30); 
-        tfAddress.setPrefWidth(100); 
-        tfCity.setPrefWidth(100);
-        tfState.setPrefWidth(40); 
-        tfTelephone.setPrefWidth(100); 
-        tfEmail.setPrefWidth(100); 
+        BorderPane root = new BorderPane();
+        root.setTop(topBox);
+        root.setCenter(bottomBox);
 
-        // Create a grid pane for input fields
-        GridPane pane = new GridPane();
-        pane.setPadding(new Insets(10));
-        pane.setHgap(5);
-        pane.setVgap(5);
-
-        // ID Field
-        pane.add(new Label("ID:"), 0, 0);
-        pane.add(tfId, 1, 0);
-
-        // Last Name, First Name, MI on the same line
-        HBox nameBox = new HBox(5);
-        nameBox.getChildren().addAll(new Label("Last Name:"), tfLastName, new Label("First Name:"), tfFirstName, new Label("MI:"), tfMI);
-        pane.add(nameBox, 0, 1, 2, 1);
-
-        // Address Field
-        pane.add(new Label("Address:"), 0, 2);
-        pane.add(tfAddress, 1, 2);
-
-        // City and State on the same line
-        HBox cityStateBox = new HBox(5);
-        cityStateBox.getChildren().addAll(new Label("City:"), tfCity, new Label("State:"), tfState);
-        pane.add(cityStateBox, 0, 3, 2, 1);
-
-        // Telephone and Email Fields
-        pane.add(new Label("Telephone:"), 0, 4);
-        pane.add(tfTelephone, 1, 4);
-        pane.add(new Label("Email:"), 0, 5);
-        pane.add(tfEmail, 1, 5);
-
-        // Optionally, constrain MI to only one character input
-        tfMI.textProperty().addListener((obs, oldText, newText) -> {
-            if (newText.length() > 1) {
-                tfMI.setText(newText.substring(0, 1));
-            }
-        });
-
-        // Create and add control buttons
-        HBox buttonBox = new HBox(10);
-        Button btView = new Button("View");
-        Button btInsert = new Button("Insert");
-        Button btUpdate = new Button("Update");
-        Button btClear = new Button("Clear");
-        buttonBox.getChildren().addAll(btView, btInsert, btUpdate, btClear);
-
-        VBox mainLayout = new VBox(10, lblStatus, pane, buttonBox);
-        mainLayout.setPadding(new Insets(10));
-
-        // Set button actions
-        btView.setOnAction(e -> viewRecord());
-        btInsert.setOnAction(e -> insertRecord());
-        btUpdate.setOnAction(e -> updateRecord());
-        btClear.setOnAction(e -> clearFields());
-
-        // Set up and display the scene
-        Scene scene = new Scene(mainLayout, 400, 450);
-        primaryStage.setTitle("Staff Database App");
+        Scene scene = new Scene(root, 400, 200);
+        primaryStage.setTitle("Exercise35_01");
         primaryStage.setScene(scene);
         primaryStage.show();
-    }
 
-    private void connectToDB() {
-        try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-            conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/assignment", "root", "");
-        } catch (Exception e) {
-            e.printStackTrace();
-            lblStatus.setText("Failed to connect to database");
-        }
-    }
-
-    // Retrieves a record from the database based on the entered ID
-    private void viewRecord() {
-        String sql = "SELECT * FROM staff WHERE ID = ?";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, tfId.getText());
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                tfLastName.setText(rs.getString("Last Name"));
-                tfFirstName.setText(rs.getString("First Name"));
-                tfMI.setText(rs.getString("MI"));
-                tfAddress.setText(rs.getString("Address"));
-                tfCity.setText(rs.getString("City"));
-                tfState.setText(rs.getString("State"));
-                tfTelephone.setText(rs.getString("Telephone"));
-                tfEmail.setText(rs.getString("Email"));
-                lblStatus.setText("Record found");
+        // Event handlers
+        btnConnect.setOnAction(e -> connectToDatabase());
+        btnBatchUpdate.setOnAction(e -> {
+            if (conn != null) {
+                long time = insertWithBatch();
+                lblStatus.setText("Batch update completed\nThe elapsed time is " + time + " ms");
             } else {
-                lblStatus.setText("Record not found");
+                lblStatus.setText("Not connected");
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        });
+        btnNonBatchUpdate.setOnAction(e -> {
+            if (conn != null) {
+                long time = insertWithoutBatch();
+                lblStatus.setText("Non-Batch update completed\nThe elapsed time is " + time + " ms");
+            } else {
+                lblStatus.setText("Not connected");
+            }
+        });
     }
 
-    // Inserts a new record into the database
-    private void insertRecord() {
-        String sql = "INSERT INTO staff (`ID`, `Last Name`, `First Name`, `MI`, `Address`, `City`, `State`, `Telephone`, `Email`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    private void connectToDatabase() {
+        batch connectionPanel = new batch();
+
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Connect to DB");
+        dialog.getDialogPane().setContent(connectionPanel);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CLOSE);
+
+        dialog.showAndWait().ifPresent(response -> {
+            if (response == ButtonType.OK) {
+                try {
+                    Class.forName(connectionPanel.getDriver());
+                    conn = DriverManager.getConnection(
+                            connectionPanel.getURL(),
+                            connectionPanel.getUsername(),
+                            connectionPanel.getPassword()
+                    );
+                    lblStatus.setText("Connected successfully");
+                } catch (Exception ex) {
+                    lblStatus.setText("Connection failed: " + ex.getMessage());
+                    ex.printStackTrace();
+                }
+            }
+        });
+    }
+
+    private long insertWithoutBatch() {
+        String sql = "INSERT INTO temp (`Num 1`, `Num 2`, `Num 3`) VALUES (?, ?, ?)";
+        long startTime = System.currentTimeMillis();
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, tfId.getText());
-            stmt.setString(2, tfLastName.getText());
-            stmt.setString(3, tfFirstName.getText());
-            stmt.setString(4, tfMI.getText());
-            stmt.setString(5, tfAddress.getText());
-            stmt.setString(6, tfCity.getText());
-            stmt.setString(7, tfState.getText());
-            stmt.setString(8, tfTelephone.getText());
-            stmt.setString(9, tfEmail.getText());
-            int rows = stmt.executeUpdate();
-            lblStatus.setText(rows > 0 ? "Record inserted" : "Insert failed");
-        } catch (SQLException e) {
-            e.printStackTrace();
-            lblStatus.setText("Insert failed: " + e.getMessage());
+            for (int i = 0; i < 1000; i++) {
+                stmt.setDouble(1, Math.random());
+                stmt.setDouble(2, Math.random());
+                stmt.setDouble(3, Math.random());
+                stmt.executeUpdate();
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
         }
+        long endTime = System.currentTimeMillis();
+        return endTime - startTime;
     }
 
-    // Updates an existing record in the database
-    private void updateRecord() {
-        String sql = "UPDATE staff SET `Last Name`=?, `First Name`=?, `MI`=?, `Address`=?, `City`=?, `State`=?, `Telephone`=?, `Email`=? WHERE ID=?";
+    private long insertWithBatch() {
+        // Corrected column names using backticks (`) instead of single quotes (')
+        String sql = "INSERT INTO Temp (`Num 1`, `Num 2`, `Num 3`) VALUES (?, ?, ?)";
+        long startTime = System.currentTimeMillis();
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, tfLastName.getText());
-            stmt.setString(2, tfFirstName.getText());
-            stmt.setString(3, tfMI.getText());
-            stmt.setString(4, tfAddress.getText());
-            stmt.setString(5, tfCity.getText());
-            stmt.setString(6, tfState.getText());
-            stmt.setString(7, tfTelephone.getText());
-            stmt.setString(8, tfEmail.getText());
-            stmt.setString(9, tfId.getText());
-            int rows = stmt.executeUpdate();
-            lblStatus.setText(rows > 0 ? "Record updated" : "Update failed: Record not found");
-        } catch (SQLException e) {
-            e.printStackTrace();
-            lblStatus.setText("Update failed: " + e.getMessage());
-        }
-    }
+            for (int i = 0; i < 1000; i++) {
+                stmt.setDouble(1, Math.random());
+                stmt.setDouble(2, Math.random());
+                stmt.setDouble(3, Math.random());
+                stmt.addBatch();
 
-    // Clears all input fields and resets the status label
-    private void clearFields() {
-        tfId.clear();
-        tfLastName.clear();
-        tfFirstName.clear();
-        tfMI.clear();
-        tfAddress.clear();
-        tfCity.clear();
-        tfState.clear();
-        tfTelephone.clear();
-        tfEmail.clear();
-        lblStatus.setText("");
+                if (i % 100 == 0) { // Optional: execute every 100 iterations
+                    stmt.executeBatch();
+                }
+            }
+            stmt.executeBatch(); // Execute any remaining batches
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+        long endTime = System.currentTimeMillis();
+        return endTime - startTime;
     }
 
     public static void main(String[] args) {
