@@ -1,75 +1,87 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ page import="java.util.Random" %>
+<%@ page import="java.util.Date" %>
+<%@ page import="java.io.PrintWriter" %>
+<%@ page import="javax.servlet.http.HttpServletRequest" %>
+<%@ page import="javax.servlet.http.HttpServletResponse" %>
+<%@ page import="javax.servlet.ServletException" %>
+<%@ page import="java.io.IOException" %>
+
+<%! 
+    public class Loan {
+        private double annualInterestRate;
+        private int numberOfYears;
+        private double loanAmount;
+        private Date loanDate;
+
+        public Loan() {
+            this(2.5, 1, 1000);
+        }
+
+        public Loan(double annualInterestRate, int numberOfYears, double loanAmount) {
+            this.annualInterestRate = annualInterestRate;
+            this.numberOfYears = numberOfYears;
+            this.loanAmount = loanAmount;
+            loanDate = new Date();
+        }
+
+        public double getMonthlyPayment() {
+            double monthlyInterestRate = annualInterestRate / 1200;
+            return loanAmount * monthlyInterestRate /
+                   (1 - (1 / Math.pow(1 + monthlyInterestRate, numberOfYears * 12)));
+        }
+
+        public double getTotalPayment() {
+            return getMonthlyPayment() * numberOfYears * 12;
+        }
+    }
+%>
 
 <html>
 <head>
-    <title>Addition Quiz</title>
+    <title>Loan Calculator</title>
 </head>
 <body>
-    <h2>Addition Quiz</h2>
+    <h2>Loan Calculator</h2>
 
     <%
-        int numQuestions = 10;
-        Random rand = new Random();
-        int[] num1 = (int[]) session.getAttribute("num1");
-        int[] num2 = (int[]) session.getAttribute("num2");
+        String amountStr = request.getParameter("amount");
+        String rateStr = request.getParameter("rate");
+        String yearsStr = request.getParameter("years");
 
-        // If questions are not stored in session, generate new ones
-        if (num1 == null || num2 == null) {
-            num1 = new int[numQuestions];
-            num2 = new int[numQuestions];
+        if (amountStr != null && rateStr != null && yearsStr != null &&
+            !amountStr.isEmpty() && !rateStr.isEmpty() && !yearsStr.isEmpty()) {
 
-            for (int i = 0; i < numQuestions; i++) {
-                num1[i] = rand.nextInt(20) + 1;
-                num2[i] = rand.nextInt(20) + 1;
-            }
+            double loanAmount = Double.parseDouble(amountStr);
+            double annualInterestRate = Double.parseDouble(rateStr);
+            int numberOfYears = Integer.parseInt(yearsStr);
 
-            // Store questions in session
-            session.setAttribute("num1", num1);
-            session.setAttribute("num2", num2);
-        }
-
-        // Check if the form was submitted
-        if (request.getParameter("submit") != null) {
-            int correctCount = 0;
-
-            for (int i = 0; i < numQuestions; i++) {
-                int userAnswer = Integer.parseInt(request.getParameter("answer" + i));
-                int correctAnswer = num1[i] + num2[i];
-
-                if (userAnswer == correctAnswer) {
+            Loan loan = new Loan(annualInterestRate, numberOfYears, loanAmount);
+            double monthlyPayment = loan.getMonthlyPayment();
+            double totalPayment = loan.getTotalPayment();
     %>
-                    <p><%= num1[i] %> + <%= num2[i] %> = <%= userAnswer %> ✅ Correct</p>
+        <h2>Loan Calculation Result</h2>
+        <p>Loan Amount: <%= loanAmount %></p>
+        <p>Annual Interest Rate: <%= annualInterestRate %>%</p>
+        <p>Number of Years: <%= numberOfYears %></p>
+        <p>Monthly Payment: <%= monthlyPayment %></p>
+        <p>Total Payment: <%= totalPayment %></p>
     <%
-                    correctCount++;
-                } else {
-    %>
-                    <p><%= num1[i] %> + <%= num2[i] %> = <%= userAnswer %> ❌ Wrong (Correct answer: <%= correctAnswer %>)</p>
-    <%
-                }
-            }
-    %>
-            <h3>Total Correct Answers: <%= correctCount %> out of <%= numQuestions %></h3>
-    <%
-            // Clear the session after displaying results
-            session.removeAttribute("num1");
-            session.removeAttribute("num2");
         } else {
     %>
         <form method="post">
-            <%
-                for (int i = 0; i < numQuestions; i++) {
-            %>
-                <label><%= num1[i] %> + <%= num2[i] %> = </label>
-                <input type="number" name="answer<%= i %>" required><br><br>
-            <%
-                }
-            %>
-            <input type="submit" name="submit" value="Submit Answers">
+            <label for="amount">Loan Amount:</label>
+            <input type="number" id="amount" name="amount" required><br><br>
+
+            <label for="rate">Annual Interest Rate:</label>
+            <input type="number" step="0.01" id="rate" name="rate" required><br><br>
+
+            <label for="years">Number of Years:</label>
+            <input type="number" id="years" name="years" required><br><br>
+
+            <input type="submit" value="Compute Loan Payment">
         </form>
     <%
         }
     %>
-
 </body>
 </html>
